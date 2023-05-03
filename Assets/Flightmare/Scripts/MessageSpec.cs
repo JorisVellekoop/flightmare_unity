@@ -235,6 +235,7 @@ namespace MessageSpec
     // Additional getters (for convenience)
     // ==============================================================================
     public Vehicle_t mainVehicle { get { return vehicles[(int)(vehicles.Count / 2)]; } }
+    public bool new_static_obstacles { get; set; }
   }
 
   public class Pub_Vehicle_t

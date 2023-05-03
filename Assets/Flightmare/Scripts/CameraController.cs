@@ -49,7 +49,7 @@ namespace RPGFlightmare
     [HideInInspector]
     public const string client_ip_pref_key = "client_ip";
     [HideInInspector]
-    public const int connection_timeout_seconds_default = 10;
+    public const int connection_timeout_seconds_default = 300;
     [HideInInspector]
     public string rpg_dsim_version = "";
 
@@ -97,6 +97,8 @@ namespace RPGFlightmare
     private Vector3 thirdPV_cam_offset;
     private int activate_vehicle_cam = 0;
 
+    List<string> ignore = new List<string>(); // objects ignored for collision detection
+    
     /* =====================
     * UNITY PLAYER EVENT HOOKS 
     * =====================
@@ -105,6 +107,12 @@ namespace RPGFlightmare
     // Only execute once.
     public void Start()
     {
+      //Unwanted objects for collision detection
+      ignore.Add("HDCamera");
+      ignore.Add("HDCamera(Clone)");
+      ignore.Add("Transparent_Cube");
+      ignore.Add("Drone_red");
+      ignore.Add("Drone_red(Clone)");
       // Application.targetFrameRate = 9999;
       // Make sure that this gameobject survives across scene reloads
       DontDestroyOnLoad(this.gameObject);
@@ -508,6 +516,21 @@ namespace RPGFlightmare
           }
         }
 
+        if (sub_message.new_static_obstacles){
+          foreach (Object_t obj_state in sub_message.static_objects)
+          {
+            // Apply translation, rotation, and scaling
+            GameObject prefab = Resources.Load(obj_state.prefabID) as GameObject;
+            GameObject other_obj = internal_state.getGameobject(obj_state.ID, prefab);
+            // GameObject other_obj = internal_state.getGameobject(obj_state.ID);
+            // GameObject other_obj = internal_state.getGameobject(obj_state.ID, gate_template);
+            Vector3 obj_position = ListToVector3(obj_state.position) + ListToVector3(settings.render_offset);
+            // Debug.Log(ListToVector3(settings.render_offset));
+            other_obj.transform.SetPositionAndRotation(obj_position, ListToQuaternion(obj_state.rotation));
+            other_obj.transform.localScale = ListToVector3(obj_state.size);
+          }
+        }
+
         foreach (Object_t obj_state in sub_message.dynamic_objects)
         {
           // Apply translation, rotation, and scaling
@@ -562,12 +585,15 @@ namespace RPGFlightmare
       if (internal_state.readyToRender)
       {
         int vehicle_count = 0;
-        foreach (var vehicl_i in settings.vehicles)
+        foreach (var vehicle_i in settings.vehicles)
         {
           vehicle_count += 1;
-          GameObject vehicle_obj = internal_state.getGameobject(vehicl_i.ID, quad_template);
+          GameObject vehicle_obj = internal_state.getGameobject(vehicle_i.ID, quad_template);
           // Check if object has collided (requires that collider hook has been setup on object previously.)
-          pub_message.pub_vehicles[vehicle_count - 1].collision = vehicle_obj.GetComponent<collisionHandler>().hasCollided;
+          // pub_message.pub_vehicles[vehicle_count - 1].collision = vehicle_obj.GetComponent<collisionHandler>().hasCollided;
+
+          // Using sphere overlap is faster and does not have 1 frame delay.
+          pub_message.pub_vehicles[vehicle_count - 1].collision = CheckCollision(vehicle_obj.transform.position, vehicle_obj.transform.localScale, vehicle_obj.transform.rotation);
         }
       }
     }
@@ -987,6 +1013,21 @@ namespace RPGFlightmare
         Animator anim = flying_cam.GetComponent<Animator>();
         if (anim) { anim.enabled = !enable_flying_cam; }
       }
+    }
+
+    private bool CheckCollision(Vector3 center, Vector3 dimensions, Quaternion orientation)
+    {
+      Collider[] hitColliders = Physics.OverlapSphere(center, dimensions[0]/2.0f);
+      // Collider[] hitColliders = Physics.OverlapBox(center, dimensions/2.0f);
+
+      foreach (var hitCollider in hitColliders)
+      {
+        if (!ignore.Contains(hitCollider.gameObject.name))
+        {
+          return true;
+        }
+      }
+      return false;
     }
 
   }

@@ -15,6 +15,7 @@ namespace RPGFlightmare
     public const string SCENE_WASTELAND = "ApocalypticWasteland/Scenes/Wasteland";
     public const string SCENE_SIMPLE = "Resources/Simple";
     public const string SCENE_MOUNTAIN= "Mountain Environment/Demo Scenes/Standard Mountain Scene";
+    public const string SCENE_EMPTY = "Environments/Industrial/Scenes/Empty";
     //
     public List<string> scenes_list = new List<string>();
     public int default_scene_id;
@@ -23,8 +24,9 @@ namespace RPGFlightmare
     {
       scenes_list.Add(SCENE_WAREHOUSE);
       scenes_list.Add(SCENE_INDUSTRIAL);
-      scenes_list.Add(SCENE_MOUNTAIN);
-      scenes_list.Add(SCENE_WASTELAND);
+      scenes_list.Add(SCENE_EMPTY);
+      // scenes_list.Add(SCENE_MOUNTAIN);
+      // scenes_list.Add(SCENE_WASTELAND);
       // scenes_list.Add(SCENE_NATUREFOREST);
 
       default_scene_id = 0;
