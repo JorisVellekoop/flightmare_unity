@@ -79,12 +79,14 @@ namespace RPGFlightmare
     private NetMQ.Sockets.SubscriberSocket pull_socket;
     private NetMQ.Sockets.PublisherSocket push_socket;
     private bool socket_initialized = false;
+    private string publish_mode;
     // setting message is also a kind of sub message,
     // but we only subscribe it for initialization.
     private SettingsMessage_t settings; // subscribed for initialization
     private SubMessage_t sub_message;  // subscribed for update
     private PubMessage_t pub_message; // publish messages, e.g., images, collision, etc.
                                       // Internal state & storage variables
+    private Pub_CollisionCheck_t pub_collisioncheck_msg;
     private UnityState_t internal_state;
     private Texture2D rendered_frame;
     private object socket_lock;
@@ -215,6 +217,7 @@ namespace RPGFlightmare
       // Setup subscriptions.
       pull_socket.Subscribe("Pose");
       pull_socket.Subscribe("PointCloud");
+      pull_socket.Subscribe("CollisionCheck");
       push_socket = new NetMQ.Sockets.PublisherSocket();
       push_socket.Options.Linger = TimeSpan.Zero; // Do not keep unsent messages on hangup.
       push_socket.Options.SendHighWatermark = 6; // Do not queue many images.
@@ -296,6 +299,7 @@ namespace RPGFlightmare
 
         if ("Pose" == new_msg[0].ConvertToString())
         {
+          publish_mode = "Pose";
           // Check that we got the whole message
           if (new_msg.FrameCount >= msg.FrameCount) { msg = new_msg; }
           if (msg.FrameCount != 2) { return; }
@@ -329,6 +333,27 @@ namespace RPGFlightmare
             //
             socket_initialized = true;
           }
+        }
+        else if ("CollisionCheck" == new_msg[0].ConvertToString())
+        {
+          publish_mode = "CollisionCheck";
+          // Thread.Sleep(100000);
+          Sub_CollisionCheck_t sub_collisioncheck_msg = JsonConvert.DeserializeObject<Sub_CollisionCheck_t>(new_msg[1].ConvertToString());
+          pub_collisioncheck_msg = new Pub_CollisionCheck_t();
+
+          GameObject vehicle_obj = internal_state.getGameobject(settings.vehicles[0].ID, quad_template);
+
+          foreach (var pose in sub_collisioncheck_msg.poses){
+            // pub_collisioncheck_msg.collision.Add(true);
+            pub_collisioncheck_msg.collision.Add(CheckCollision(ListToVector3(pose.position), vehicle_obj.transform.localScale, ListToQuaternion(pose.rotation)));
+          }
+          // var msg_pub = new NetMQMessage();
+          // msg_pub.Append(JsonConvert.SerializeObject(pub_collisioncheck_msg));
+          // if (push_socket.HasOut)
+          // {
+          //   push_socket.TrySendMultipartMessage(pub_collisioncheck_msg);
+          // }
+
         }
         else if ("PointCloud" == new_msg[0].ConvertToString())
         {
@@ -848,38 +873,44 @@ namespace RPGFlightmare
     // Reads a scene frame from the GPU backbuffer and sends it via ZMQ.
     void sendFrameOnWire()
     {
-      // Get metadata
-      pub_message.frame_id = sub_message.frame_id;
-      // Create packet metadata
       var msg = new NetMQMessage();
-      msg.Append(JsonConvert.SerializeObject(pub_message));
+      if (publish_mode == "CollisionCheck"){
+        msg.Append(JsonConvert.SerializeObject(pub_collisioncheck_msg));
+      }
+      else {
+        // Get metadata
+        pub_message.frame_id = sub_message.frame_id;
+        // Create packet metadata
+        // var msg = new NetMQMessage();
+        msg.Append(JsonConvert.SerializeObject(pub_message));
 
-      int vehicle_count = 0;
-      foreach (var vehicle_i in settings.vehicles)
-      {
-        foreach (var cam_config in vehicle_i.cameras)
+        int vehicle_count = 0;
+        foreach (var vehicle_i in settings.vehicles)
         {
-          vehicle_count += 1;
-          // Length of RGB slice
-          // string camera_ID = cam_config.ID;
-          GameObject vehicle_obj = internal_state.getGameobject(vehicle_i.ID, quad_template);
-          //
-          GameObject obj = internal_state.getGameobject(cam_config.ID, HD_camera);
-          var current_cam = obj.GetComponent<Camera>();
-          var raw = readImageFromHiddenCamera(current_cam, cam_config);
-          msg.Append(raw);
-
-          int layer_id = 0;
-          foreach (var layer_on in cam_config.enabledLayers)
+          foreach (var cam_config in vehicle_i.cameras)
           {
-            if (layer_on)
+            vehicle_count += 1;
+            // Length of RGB slice
+            // string camera_ID = cam_config.ID;
+            GameObject vehicle_obj = internal_state.getGameobject(vehicle_i.ID, quad_template);
+            //
+            GameObject obj = internal_state.getGameobject(cam_config.ID, HD_camera);
+            var current_cam = obj.GetComponent<Camera>();
+            var raw = readImageFromHiddenCamera(current_cam, cam_config);
+            msg.Append(raw);
+
+            int layer_id = 0;
+            foreach (var layer_on in cam_config.enabledLayers)
             {
-              string filter_ID = cam_config.ID + "_" + layer_id.ToString();
-              var rawimage = img_post_processing.getRawImage(internal_state.camera_filters[filter_ID],
-                  settings.camWidth, settings.camHeight, img_post_processing.image_modes[layer_id]);
-              msg.Append(rawimage);
+              if (layer_on)
+              {
+                string filter_ID = cam_config.ID + "_" + layer_id.ToString();
+                var rawimage = img_post_processing.getRawImage(internal_state.camera_filters[filter_ID],
+                    settings.camWidth, settings.camHeight, img_post_processing.image_modes[layer_id]);
+                msg.Append(rawimage);
+              }
+              layer_id += 1;
             }
-            layer_id += 1;
           }
         }
 

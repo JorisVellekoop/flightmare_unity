@@ -280,4 +280,21 @@ namespace MessageSpec
     public string file_name { get; set; }
   }
 
+  public class Pose_t
+  {
+    public List<float> position { get; set; }
+    public List<float> rotation { get; set; }
+  }
+
+  public class Sub_CollisionCheck_t
+  {
+    public List<Pose_t> poses { get; set; }
+  }
+
+  public class Pub_CollisionCheck_t
+  {
+    public Int64 frame_id = 0;
+    public List<bool> collision = new List<bool>();
+  }
+
 }
