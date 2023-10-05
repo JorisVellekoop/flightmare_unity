@@ -13,8 +13,8 @@ GameObject:
   - component: {fileID: 7988591063729624341}
   - component: {fileID: 3821164089236436921}
   m_Layer: 0
-  m_Name: block2
-  m_TagString: Untagged
+  m_Name: wall
+  m_TagString: Obstacle
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -62,7 +62,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: d37192d2a460db490ab29a7e9024034a, type: 2}
+  - {fileID: 2100000, guid: 57853bd09e6482d4f8e7fbd0f0364014, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

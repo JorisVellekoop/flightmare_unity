@@ -99,6 +99,8 @@ namespace RPGFlightmare
     private Vector3 thirdPV_cam_offset;
     private int activate_vehicle_cam = 0;
 
+    // List<Object_t> static_objects_old = new List<Object_t>();
+
     List<string> ignore = new List<string>(); // objects ignored for collision detection
     
     /* =====================
@@ -542,6 +544,15 @@ namespace RPGFlightmare
         }
 
         if (sub_message.new_static_obstacles){
+          // var unique_prefab = new List<string>();
+          // foreach (Object_t obj_state in sub_message.static_objects){
+          //   if (!unique_prefab.Contains(obj_state.prefabID))
+          //     unique_prefab.Add(obj_state.prefabID);
+          //     DestroyObjectsInScene(obj_state.prefabID);
+          // }
+
+          DestroyObjectsInScene("Obstacle");
+          
           foreach (Object_t obj_state in sub_message.static_objects)
           {
             // Apply translation, rotation, and scaling
@@ -1059,6 +1070,17 @@ namespace RPGFlightmare
         }
       }
       return false;
+    }
+
+    void DestroyObjectsInScene(string tagName) 
+    {
+      //foreach (GameObject obj in GameObject.FindGameObjectsWithTag("IR_Markers"))
+      foreach (GameObject obj in GameObject.FindGameObjectsWithTag(tagName))
+      {
+        // obj.SetActive(false);
+        obj.transform.SetPositionAndRotation(new Vector3(-1000, -1000, -1000), new Quaternion(0, 0, 0, 0));
+        // Destroy(obj);
+      }
     }
 
   }
