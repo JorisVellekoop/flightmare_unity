@@ -542,6 +542,9 @@ namespace RPGFlightmare
         }
 
         if (sub_message.new_static_obstacles){
+
+          RemoveObjectsInScene("Obstacle");
+
           foreach (Object_t obj_state in sub_message.static_objects)
           {
             // Apply translation, rotation, and scaling
@@ -1059,6 +1062,17 @@ namespace RPGFlightmare
         }
       }
       return false;
+    }
+
+    void RemoveObjectsInScene(string tagName) 
+    {
+      //foreach (GameObject obj in GameObject.FindGameObjectsWithTag("IR_Markers"))
+      foreach (GameObject obj in GameObject.FindGameObjectsWithTag(tagName))
+      {
+        // obj.SetActive(false);
+        obj.transform.SetPositionAndRotation(new Vector3(-1000, -1000, -1000), new Quaternion(0, 0, 0, 0));
+        // Destroy(obj);
+      }
     }
 
   }
